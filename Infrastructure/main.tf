@@ -196,45 +196,45 @@ module "ALB" {
 
 }
 
-resource "aws_security_group" "SECURITY_GROUP_ECS_TASK" {
-  name        = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
-  description = "controls access to the ECS task"
-  vpc_id      = module.Networking.AWS_VPC
-  tags = {
-    Name = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
-  }
+# resource "aws_security_group" "SECURITY_GROUP_ECS_TASK" {
+#   name        = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
+#   description = "controls access to the ECS task"
+#   vpc_id      = module.Networking.AWS_VPC
+#   tags = {
+#     Name = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
+#   }
 
-  ingress {
-    protocol        = "tcp"
-    from_port       = "80"
-    to_port         = "80"
-    security_groups = [aws_security_group.SECURITY_GROUP_ALB.id]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+#   ingress {
+#     protocol        = "tcp"
+#     from_port       = "80"
+#     to_port         = "80"
+#     security_groups = [aws_security_group.SECURITY_GROUP_ALB.id]
+#   }
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
 
-resource "aws_ecs_cluster" "CLUSTER" {
-  name = "Cluster-testing"
-}
+# resource "aws_ecs_cluster" "CLUSTER" {
+#   name = "Cluster-testing"
+# }
 
-module "ECS_SERVICE" {
-  depends_on          = [module.ALB]
-  source              = "./Modules/ECS/Service"
-  NAME                = "Service_${var.ENVIRONMENT_NAME}"
-  DESIRED_TASKS       = 1
-  REGION              = var.AWS_REGION
-  ARN_SECURITY_GROUP  = aws_security_group.SECURITY_GROUP_ECS_TASK.id
-  ECS_CLUSTER_ID      = aws_ecs_cluster.CLUSTER.id
-  ARN_TARGET_GROUP    = module.TARGET_GROUP.ARN_TG
-  ARN_TASK_DEFINITION = module.ECS_TASK_DEFINITION.ARN_TASK_DEFINITION
-  SUBNET_ID           = [module.Networking.PRIVATE_SUBNETS[0], module.Networking.PRIVATE_SUBNETS[1]]
-  CONTAINER_PORT      = 80
-}
+# module "ECS_SERVICE" {
+#   depends_on          = [module.ALB]
+#   source              = "./Modules/ECS/Service"
+#   NAME                = "Service_${var.ENVIRONMENT_NAME}"
+#   DESIRED_TASKS       = 1
+#   REGION              = var.AWS_REGION
+#   ARN_SECURITY_GROUP  = aws_security_group.SECURITY_GROUP_ECS_TASK.id
+#   ECS_CLUSTER_ID      = aws_ecs_cluster.CLUSTER.id
+#   ARN_TARGET_GROUP    = module.TARGET_GROUP.ARN_TG
+#   ARN_TASK_DEFINITION = module.ECS_TASK_DEFINITION.ARN_TASK_DEFINITION
+#   SUBNET_ID           = [module.Networking.PRIVATE_SUBNETS[0], module.Networking.PRIVATE_SUBNETS[1]]
+#   CONTAINER_PORT      = 80
+# }
 
 
 ## CodePipeline
@@ -249,25 +249,92 @@ resource "aws_s3_bucket" "AWS_BUCKET" {
 }
 
 module "DevOps_ROLE" {
-  source          = "./Modules/IAM"
-  CREATE_ECS_ROLE = true
-  NAME            = var.ENVIRONMENT_NAME
+  source             = "./Modules/IAM"
+  CREATE_DEVOPS_ROLE = true
+  NAME               = var.ENVIRONMENT_NAME
+}
+
+
+data "aws_iam_policy_document" "ROLE_POLICY_DEVOPS_ROLE" {
+  statement {
+    sid    = "AllowS3Actions"
+    effect = "Allow"
+    actions = [
+      "s3:*"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid    = "AllowCodebuildActions"
+    effect = "Allow"
+    actions = [
+      "codebuild:*"
+    ]
+    resources = ["*"]
+  }
+  statement {
+    sid    = "AllowECRActions"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:CompleteLayerUpload",
+      "ecr:GetAuthorizationToken",
+      "ecr:InitiateLayerUpload",
+      "ecr:PutImage",
+      "ecr:UploadLayerPart"
+
+    ]
+    resources = [aws_ecr_repository.AWS_ECR.arn]
+  }
+  statement {
+    sid    = "AllowCloudWatchActions"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["*"]
+  }
+}
+
+module "POLICY_DEVOPS_ROLE" {
+  source        = "./Modules/IAM"
+  NAME          = "devops-${var.ENVIRONMENT_NAME}"
+  CREATE_POLICY = true
+  ATTACH_TO     = module.DevOps_ROLE.NAME_ROLE
+  POLICY        = data.aws_iam_policy_document.ROLE_POLICY_DEVOPS_ROLE.json
+
+}
+
+module "CODEBUILD" {
+  source       = "./Modules/CodeBuild"
+  NAME         = "codebuild-${var.ENVIRONMENT_NAME}"
+  IAM_ROLE     = module.DevOps_ROLE.ARN_ROLE
+  REGION       = var.AWS_REGION
+  ACCOUNT_ID   = data.aws_caller_identity.ID_CURRENT_ACCOUNT.account_id
+  ECR_REPO_URL = aws_ecr_repository.AWS_ECR.repository_url
+
 }
 
 
 module "CODEPIPELINE" {
-  source           = "./Modules/CodePipeline"
-  Name             = "pipe-${var.ENVIRONMENT_NAME}"
-  PIPE_ROLE        = module.DevOps_ROLE.ARN_ROLE
-  S3_BUCKET        = resource.aws_s3_bucket.AWS_BUCKET.id
-  GITHUB_TOKEN     = "sdfdsfsdf"
-  REPO_OWNER       = "dadasd"
-  REPO_NAME        = "asdasd"
-  BRANCH           = "main"
-  ecs_cluster_name = ""
-  service_name     = ""
+  source            = "./Modules/CodePipeline"
+  NAME              = "pipe-${var.ENVIRONMENT_NAME}"
+  PIPE_ROLE         = module.DevOps_ROLE.ARN_ROLE
+  S3_BUCKET         = aws_s3_bucket.AWS_BUCKET.id
+  GITHUB_TOKEN      = "b5d08cf48160b1d28d68e8e3031411b9b6f47402"
+  REPO_OWNER        = "danielrive"
+  REPO_NAME         = "DevOpsTestAWS"
+  BRANCH            = "main"
+  CODEBUILD_PROJECT = module.CODEBUILD.ID
+  ecs_cluster_name  = "sasd"
+  service_name      = "asdas"
 
 }
+
+
+
 
 
 

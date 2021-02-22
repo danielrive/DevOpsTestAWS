@@ -1,4 +1,4 @@
-variable "Name" {
+variable "NAME" {
   type = string
 }
 
@@ -27,8 +27,7 @@ variable "BRANCH" {
   type = string
 }
 
-
-variable "poll_source_changes" {
+variable "CODEBUILD_PROJECT" {
   type = string
 }
 

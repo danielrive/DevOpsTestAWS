@@ -31,7 +31,7 @@ EOF
 
 resource "aws_iam_role" "DevOps_ROLE" {
   count              = var.CREATE_DEVOPS_ROLE == true ? 1 : 0
-  name               = "ECS-ROLE-${var.NAME}"
+  name               = "DevOps-ROLE-${var.NAME}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -49,6 +49,12 @@ resource "aws_iam_role" "DevOps_ROLE" {
   ]
 }
 EOF
+  tags = {
+    Name = "DevOps-ROLE-${var.NAME}"
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 

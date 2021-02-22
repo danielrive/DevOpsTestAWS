@@ -1,5 +1,5 @@
 resource "aws_codepipeline" "AWS_CODEPIPELINE" {
-  name     = var.Name
+  name     = var.NAME
   role_arn = var.PIPE_ROLE
 
   artifact_store {
@@ -16,7 +16,7 @@ resource "aws_codepipeline" "AWS_CODEPIPELINE" {
       owner            = "ThirdParty"
       provider         = "GitHub"
       version          = "1"
-      output_artifacts = ["code"]
+      output_artifacts = ["SourceArtifact"]
 
       configuration = {
         OAuthToken           = var.GITHUB_TOKEN
@@ -32,17 +32,14 @@ resource "aws_codepipeline" "AWS_CODEPIPELINE" {
     name = "Build"
 
     action {
-      name     = "Build"
-      category = "Build"
-      owner    = "AWS"
-      provider = "CodeBuild"
-      version  = "1"
-
-      input_artifacts  = ["code"]
-      output_artifacts = ["task"]
-
+      name            = "Build"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      version         = "1"
+      input_artifacts = ["SourceArtifact"]
       configuration = {
-        ProjectName = var.Name
+        ProjectName = var.CODEBUILD_PROJECT
       }
     }
   }
