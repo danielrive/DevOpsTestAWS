@@ -326,7 +326,7 @@ module "CODEPIPELINE" {
   GITHUB_TOKEN      = "b5d08cf48160b1d28d68e8e3031411b9b6f47402"
   REPO_OWNER        = "danielrive"
   REPO_NAME         = "DevOpsTestAWS"
-  BRANCH            = "main"
+  BRANCH            = "develop"
   CODEBUILD_PROJECT = module.CODEBUILD.ID
   ecs_cluster_name  = "sasd"
   service_name      = "asdas"

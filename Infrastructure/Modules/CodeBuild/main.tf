@@ -10,7 +10,7 @@ resource "aws_codebuild_project" "AWS_CODEBUILD" {
 
   environment {
     compute_type    = "BUILD_GENERAL1_SMALL"
-    image           = "docker:dind"
+    image           = "aws/codebuild/standard:4.0"
     type            = "LINUX_CONTAINER"
     privileged_mode = true
     environment_variable {
