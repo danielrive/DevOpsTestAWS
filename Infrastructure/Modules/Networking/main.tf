@@ -124,6 +124,6 @@ resource "aws_route_table_association" "RT_ASS_PRIV_SUBNETS" {
 resource "aws_route_table_association" "RT_ASS_PUB_SUBNETs" {
   count          = 2
   subnet_id      = aws_subnet.PUBLIC_SUBNETS[count.index].id
-  route_table_id = aws_vpc.VPC.main_route_table_id
+  route_table_id = aws_vpc.AWS_VPC.main_route_table_id
 }
 

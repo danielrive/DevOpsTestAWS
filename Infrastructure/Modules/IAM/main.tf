@@ -29,6 +29,35 @@ EOF
 }
 
 
+resource "aws_iam_role" "DevOps_ROLE" {
+  count              = var.CREATE_DEVOPS_ROLE == true ? 1 : 0
+  name               = "DevOps-ROLE-${var.NAME}"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "codebuild.amazonaws.com",
+          "codepipeline.amazonaws.com"
+        ]
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+  tags = {
+    Name = "DevOps-ROLE-${var.NAME}"
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+
 resource "aws_iam_policy" "POLICY_FOR_ROLE" {
   count       = var.CREATE_POLICY == true ? 1 : 0
   name        = "Policy_${var.NAME}"

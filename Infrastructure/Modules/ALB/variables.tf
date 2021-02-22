@@ -15,6 +15,12 @@ variable "CREATE_ALB" {
   default     = false
 }
 
+variable "ENABLE_HTTPS" {
+  description = "set to true this variable to create a HTTPS listener"
+  type        = bool
+  default     = false
+}
+
 variable "CREATE_TARGET_GROUP" {
   description = "set to true this variable to create a Target Group"
   type        = bool

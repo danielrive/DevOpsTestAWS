@@ -10,3 +10,17 @@ variable "AWS_REGION" {
   default     = "us-east-1"
   description = "the Region in which you want to launch the resources"
 }
+
+variable "ENVIRONMENT_NAME" {
+  type    = string
+  default = "us-east-1"
+
+}
+
+variable "PORT_APP" {
+  default = {
+    PORT = "9191"
+  }
+
+  type = map(string)
+}

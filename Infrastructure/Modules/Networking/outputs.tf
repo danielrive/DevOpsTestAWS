@@ -2,7 +2,7 @@
 
 # VPC ID 
 output "AWS_VPC" {
-  value = aws_vpc.InstrideVPC.id
+  value = aws_vpc.AWS_VPC.id
 }
 
 # ------ Subnets Publics ------
