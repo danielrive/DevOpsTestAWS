@@ -15,16 +15,16 @@ data "aws_caller_identity" "ID_CURRENT_ACCOUNT" {}
 
 # # # Certificate ARN  # # #
 
-data "aws_acm_certificate" "CERTIFICATE" {
-  domain = "danielrive.site"
-}
+# data "aws_acm_certificate" "CERTIFICATE" {
+#   domain = "danielrive.site"
+# }
 
 
 #   Networking 
 
 module "Networking" {
   source = "./Modules/Networking"
-  CIDR   = ["10.100.0.0/16"]
+  CIDR   = ["10.120.0.0/16"]
   NAME   = var.ENVIRONMENT_NAME
 }
 
@@ -70,13 +70,16 @@ data "aws_iam_policy_document" "KMS_POLICY" {
 
 module "KMS_SECRET_MANAGER" {
   source = "./Modules/KMS"
-  NAME   = "KMS-key-SecretManager"
-  providers = {
-    aws = aws.Security_Account
-  }
+  NAME   = "KMS-key-SecretManager-${var.ENVIRONMENT_NAME}"
   POLICY = data.aws_iam_policy_document.KMS_POLICY.json
 }
 
+
+
+resource "aws_ecr_repository" "AWS_ECR" {
+  name                 = "repo-${var.ENVIRONMENT_NAME}"
+  image_tag_mutability = "MUTABLE"
+}
 
 data "aws_iam_policy_document" "ROLE_POLICY" {
   statement {
@@ -88,12 +91,21 @@ data "aws_iam_policy_document" "ROLE_POLICY" {
     ]
     resources = [module.KMS_SECRET_MANAGER.ARN_KMS]
   }
+  statement {
+    sid    = "AllowECRActions"
+    effect = "Allow"
+    actions = [
+      "ECR:Decrypt",
+      "kms:DescribeKey"
+    ]
+    resources = [module.KMS_SECRET_MANAGER.ARN_KMS]
+  }
 }
 
 
 module "POLICY_ECS_ROLE" {
   source        = "./Modules/IAM"
-  NAME          = "ECS-Role-TASK"
+  NAME          = "ECS-Role-TASK-${var.ENVIRONMENT_NAME}"
   CREATE_POLICY = true
   ATTACH_TO     = module.ECS_ROLE.NAME_ROLE
   POLICY        = data.aws_iam_policy_document.ROLE_POLICY.json
@@ -118,21 +130,22 @@ data "aws_iam_policy_document" "SECRET_MANAGER_POLICY" {
 
 module "SECRET_MANAGER" {
   source    = "./Modules/SecretManager"
-  NAME      = "SECRET_MANAGER_TEST1"
+  NAME      = "SECRET_MANAGER_${var.ENVIRONMENT_NAME}"
   RETENTION = 10
   KMS_KEY   = module.KMS_SECRET_MANAGER.ARN_KMS
   POLICY    = data.aws_iam_policy_document.SECRET_MANAGER_POLICY.json
 
 }
 
+
 module "ECS_TASK_DEFINITION" {
-  depends_on     = [module.SECRET_MANAGER]
+  depends_on     = [module.SECRET_MANAGER, aws_ecr_repository.AWS_ECR]
   source         = "./Modules/ECS/TaskDefinition"
-  NAME           = "test"
+  NAME           = "TD-${var.ENVIRONMENT_NAME}"
   ARN_ROLE       = module.ECS_ROLE.ARN_ROLE
   CPU            = 512
   MEMORY         = "1024"
-  DOCKER_REPO    = "golang:1.16"
+  DOCKER_REPO    = aws_ecr_repository.AWS_ECR.repository_url
   REGION         = "us-east-1"
   SECRET_ARN     = module.SECRET_MANAGER.SECRET_ARN
   CONTAINER_PORT = 80
@@ -141,7 +154,7 @@ module "ECS_TASK_DEFINITION" {
 module "TARGET_GROUP" {
   source              = "./Modules/ALB"
   CREATE_TARGET_GROUP = true
-  NAME                = "testing"
+  NAME                = "TG-${var.ENVIRONMENT_NAME}"
   PORT                = 80
   PROTOCOL            = "HTTP"
   VPC                 = module.Networking.AWS_VPC
@@ -151,7 +164,7 @@ module "TARGET_GROUP" {
 }
 
 resource "aws_security_group" "SECURITY_GROUP_ALB" {
-  name        = "SG_ALB_TEST"
+  name        = "SG_ALB_${var.ENVIRONMENT_NAME}"
   description = "controls access to the ALB"
   vpc_id      = module.Networking.AWS_VPC
   tags = {
@@ -176,7 +189,7 @@ resource "aws_security_group" "SECURITY_GROUP_ALB" {
 module "ALB" {
   source         = "./Modules/ALB"
   CREATE_ALB     = true
-  NAME           = "alb-testing"
+  NAME           = "alb-${var.ENVIRONMENT_NAME}"
   SUBNETS        = [module.Networking.PUBLIC_SUBNETS[0], module.Networking.PUBLIC_SUBNETS[1]]
   SECURITY_GROUP = aws_security_group.SECURITY_GROUP_ALB.id
   TARGET_GROUP   = module.TARGET_GROUP.ARN_TG
@@ -184,11 +197,11 @@ module "ALB" {
 }
 
 resource "aws_security_group" "SECURITY_GROUP_ECS_TASK" {
-  name        = "SG_ECS_TASK"
+  name        = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
   description = "controls access to the ECS task"
   vpc_id      = module.Networking.AWS_VPC
   tags = {
-    Name = "SG_ECS_TASK"
+    Name = "SG_ECS_TASK_${var.ENVIRONMENT_NAME}"
   }
 
   ingress {
@@ -212,9 +225,9 @@ resource "aws_ecs_cluster" "CLUSTER" {
 module "ECS_SERVICE" {
   depends_on          = [module.ALB]
   source              = "./Modules/ECS/Service"
-  NAME                = "test"
+  NAME                = "Service_${var.ENVIRONMENT_NAME}"
   DESIRED_TASKS       = 1
-  REGION              = "us-east-1"
+  REGION              = var.AWS_REGION
   ARN_SECURITY_GROUP  = aws_security_group.SECURITY_GROUP_ECS_TASK.id
   ECS_CLUSTER_ID      = aws_ecs_cluster.CLUSTER.id
   ARN_TARGET_GROUP    = module.TARGET_GROUP.ARN_TG
@@ -222,6 +235,44 @@ module "ECS_SERVICE" {
   SUBNET_ID           = [module.Networking.PRIVATE_SUBNETS[0], module.Networking.PRIVATE_SUBNETS[1]]
   CONTAINER_PORT      = 80
 }
+
+
+## CodePipeline
+
+resource "aws_s3_bucket" "AWS_BUCKET" {
+  bucket = "artifacts-codepipeline-${var.ENVIRONMENT_NAME}"
+  acl    = "private"
+  tags = {
+    Name        = "artifacts-codepipeline-${var.ENVIRONMENT_NAME}"
+    Environment = "Dev"
+  }
+}
+
+module "DevOps_ROLE" {
+  source          = "./Modules/IAM"
+  CREATE_ECS_ROLE = true
+  NAME            = var.ENVIRONMENT_NAME
+}
+
+
+module "CODEPIPELINE" {
+  source           = "./Modules/CodePipeline"
+  Name             = "pipe-${var.ENVIRONMENT_NAME}"
+  PIPE_ROLE        = module.DevOps_ROLE.ARN_ROLE
+  S3_BUCKET        = resource.aws_s3_bucket.AWS_BUCKET.id
+  GITHUB_TOKEN     = "sdfdsfsdf"
+  REPO_OWNER       = "dadasd"
+  REPO_NAME        = "asdasd"
+  BRANCH           = "main"
+  ecs_cluster_name = ""
+  service_name     = ""
+
+}
+
+
+
+
+
 
 
 

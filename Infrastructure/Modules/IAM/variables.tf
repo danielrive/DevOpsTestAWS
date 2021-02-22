@@ -9,11 +9,21 @@ variable "CREATE_ECS_ROLE" {
   default     = false
 }
 
-variable "CREATE_POLICY" {
-  ddescription = "set this variable to true if you want to create an IAM Policy"
-  type         = bool
-  default      = false
+
+variable "CREATE_DEVOPS_ROLE" {
+  description = "set this variable to true if you want to create a role for AWS DevOps Tools"
+  type        = bool
+  default     = false
 }
+
+
+
+variable "CREATE_POLICY" {
+  description = "set this variable to true if you want to create an IAM Policy"
+  type        = bool
+  default     = false
+}
+
 
 variable "ATTACH_TO" {
   description = "the arn or role name to attach the policy created"

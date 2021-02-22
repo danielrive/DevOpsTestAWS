@@ -32,7 +32,7 @@ resource "aws_ecs_task_definition" "ECS_TASK_DEFINITION" {
                 "secrets": [
                   {
                     "name" : "VARIABLE_NAME",
-                    "valueFrom" :  ${var.SECRET_ARN}
+                    "valueFrom" :  "${var.SECRET_ARN}"
                   }
                 ]
                 }
