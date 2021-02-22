@@ -15,10 +15,19 @@ WORKDIR /dist
 
 RUN cp /build/frontBinary .
 
-FROM scratch
 
-COPY --from=base /dist/frontBinary /
+
+FROM golang:1.16.0-alpine3.12
+
+RUN apk update \
+    && apk add --no-cache jq
+
+COPY --from=base /dist/frontBinary /usr/src/frontBinary
+
+COPY runapp.sh /usr/src/runapp.sh
+
+RUN chmod +x  /usr/src/runapp.sh
 
 EXPOSE 9191
 
-CMD ["/frontBinary"]
+ENTRYPOINT ["sh","/usr/src/runapp.sh"]

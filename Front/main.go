@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/joho/godotenv"
 )
 
 // Response  format for api response
@@ -88,12 +86,6 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 
 func goDotEnvVariable(key string) string {
 
-	// load .env file
-	err := godotenv.Load(".env")
-
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-
+	// return the env variable using os package
 	return os.Getenv(key)
 }

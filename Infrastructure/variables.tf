@@ -19,7 +19,7 @@ variable "ENVIRONMENT_NAME" {
 
 variable "PORT_APP" {
   default = {
-    PORT = "9191"
+    PORT = "9296"
   }
 
   type = map(string)
