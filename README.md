@@ -101,7 +101,7 @@ The above command will create a docker image, you can validate the image creatio
 With the docker image already created you can run a container using that image, for that run the following command.
 
 ``` shell
- docker run -itd -p 9191:9191 docker_image_name 
+ docker run -itd -p 9191:9191 -e PORT="PORT number" docker_image_name 
 ```
 
 once you have the container running you can test in your browser
@@ -112,6 +112,12 @@ once you have the container running you can test in your browser
 **2. Run locally using Golang**
 
 For this case, you need to have installed Golang on your local computer, use go1.15.2 version or higher, follow this [link](https://golang.org/doc/install) to install Golang. 
+
+Golang app use env variables to get the port in which the aplication will listet, please set the port running
+
+``` shell
+ exportp PORT="port number"
+```
 
 Once you have Golang installed you can run the application, for that move to the Front folder, and run
 ``` shell
