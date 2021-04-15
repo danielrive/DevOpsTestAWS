@@ -1,0 +1,46 @@
+version: 2.1
+executors:
+  golang-executor:
+    docker:
+      - image: circleci/golang:1.13
+
+commands:
+  checking-go-version:
+    description: "printing golang version"
+    steps:
+      - run:
+          name: print go version
+          command: go version
+  echo-message:
+    description: "printing hello world"
+    steps:
+      - run:
+          name: print go version
+          command: echo "hello world"
+
+jobs:
+  print-go-version:
+    executor: golang-executor
+    steps:
+      - checking-go-version
+  printing-message:
+    executor: golang-executor
+    steps:
+      - echo-message
+
+workflows:
+  printing-in-stdout:
+    jobs:
+      - print-go-version:
+          filters:
+            branches:
+              only:
+                - develop
+  printing2-in-stdout:
+    jobs:
+      - printing-message:
+          filters:
+            branches:
+              only:
+                - master
+
