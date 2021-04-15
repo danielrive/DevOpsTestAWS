@@ -11,7 +11,7 @@ commands:
       - run:
           name: print go version
           command: go version
-  printing-message:
+  echo-message:
     description: "printing hello world"
     steps:
       - run:
@@ -23,6 +23,10 @@ jobs:
     executor: golang-executor
     steps:
       - checking-go-version
+  printing-message:
+    executor: golang-executor
+    steps:
+      - echo-message
 
 workflows:
   printing-in-stdout:
