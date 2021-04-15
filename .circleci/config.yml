@@ -11,6 +11,12 @@ commands:
       - run:
           name: print go version
           command: go version
+  printing-message:
+    description: "printing hello world"
+    steps:
+      - run:
+          name: print go version
+          command: echo "hello world"
 
 jobs:
   print-go-version:
@@ -26,4 +32,11 @@ workflows:
             branches:
               only:
                 - develop
+  printing2-in-stdout:
+    jobs:
+      - printing-message:
+          filters:
+            branches:
+              only:
+                - master
 
