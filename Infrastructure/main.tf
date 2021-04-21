@@ -164,7 +164,7 @@ module "ECS_TASK_DEFINITION" {
   DOCKER_REPO    = aws_ecr_repository.AWS_ECR.repository_url
   REGION         = "us-east-1"
   SECRET_ARN     = module.SECRET_MANAGER.SECRET_ARN
-  CONTAINER_PORT = 9191
+  CONTAINER_PORT = var.PORT_APP["PORT"]
 }
 
 # Creating Target Group for ALB
@@ -178,7 +178,7 @@ module "TARGET_GROUP" {
   VPC                 = module.Networking.AWS_VPC
   TG_TYPE             = "ip"
   HEALTH_CHECK_PATH   = "/health"
-  HEALTH_CHECK_PORT   = 9191
+  HEALTH_CHECK_PORT   = var.PORT_APP["PORT"]
 }
 
 # Creating Security Group for ALB
@@ -229,8 +229,8 @@ resource "aws_security_group" "SECURITY_GROUP_ECS_TASK" {
 
   ingress {
     protocol        = "tcp"
-    from_port       = "9191"
-    to_port         = "9191"
+    from_port       = var.PORT_APP["PORT"]
+    to_port         = var.PORT_APP["PORT"]
     security_groups = [aws_security_group.SECURITY_GROUP_ALB.id]
   }
   egress {
@@ -259,7 +259,7 @@ module "ECS_SERVICE" {
   ARN_TARGET_GROUP    = module.TARGET_GROUP.ARN_TG
   ARN_TASK_DEFINITION = module.ECS_TASK_DEFINITION.ARN_TASK_DEFINITION
   SUBNET_ID           = [module.Networking.PRIVATE_SUBNETS[0], module.Networking.PRIVATE_SUBNETS[1]]
-  CONTAINER_PORT      = 9191
+  CONTAINER_PORT      = var.PORT_APP["PORT"]
 }
 
 
@@ -359,10 +359,10 @@ module "CODEPIPELINE" {
   NAME              = "pipe-${var.ENVIRONMENT_NAME}"
   PIPE_ROLE         = module.DevOps_ROLE.ARN_ROLE
   S3_BUCKET         = aws_s3_bucket.AWS_BUCKET.id
-  GITHUB_TOKEN      = "b5d08cf48160b1d28d68e8e3031411b9b6f47402"
+  GITHUB_TOKEN      = var.GITHUBTOKEN
   REPO_OWNER        = "danielrive"
   REPO_NAME         = "DevOpsTestAWS"
-  BRANCH            = "develop"
+  BRANCH            = "main"
   CODEBUILD_PROJECT = module.CODEBUILD.ID
   ecs_cluster_name  = "sasd"
   service_name      = "asdas"

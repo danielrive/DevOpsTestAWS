@@ -17,9 +17,16 @@ variable "ENVIRONMENT_NAME" {
 
 }
 
+variable "GITHUBTOKEN" {
+  type    = string
+  default = "1234"
+
+}
+
+
 variable "PORT_APP" {
   default = {
-    PORT = "9191"
+    PORT = "9296"
   }
 
   type = map(string)
